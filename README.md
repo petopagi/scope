@@ -1,107 +1,110 @@
 # Scope
 
-A real-time vector oscilloscope for macOS. Point it at any running app — or the
-whole system — and it draws the audio the way an analog scope would: left channel
-on X, right channel on Y, traced by a glowing phosphor beam that lingers and blooms.
+A real-time oscilloscope for macOS. You point it at an app (or the whole system)
+and it draws the audio like an old analog scope would: the left channel goes on the
+X axis, the right channel on the Y axis, and a glowing beam traces out the shape. It
+leaves trails and blooms like a real CRT.
 
-No loopback driver, no BlackHole, no virtual audio devices. Scope listens to a
-process's output directly through Core Audio's process-tap API.
+It grabs the sound straight from the app using Core Audio's process taps, so you
+don't need BlackHole or any loopback driver.
 
 ![Scope drawing a Lissajous figure](docs/scope.png)
 
-## Requirements
+## What you need
 
-- macOS 14.4 or later — process taps technically arrived in 14.2, but they're only
-  dependable from 14.4 on
-- A Metal-capable Mac (anything from the last decade)
-- Xcode 16 or later to build
+- macOS 14.4 or newer (the tap API showed up in 14.2 but only really works from 14.4)
+- a Mac that runs Metal, so basically any Mac from the last 10 years
+- Xcode 16 or newer to build it
 
 ## Building
 
-The `.xcodeproj` is checked in, so the fastest path is just:
+The Xcode project is already in the repo, so the easy way is:
 
 ```sh
 open Scope.xcodeproj
 ```
 
-and hit Run. Or from the terminal:
+and press Run. Or in the terminal:
 
 ```sh
 xcodebuild -scheme Scope -configuration Release build
 ```
 
-There's no signing team set — it builds ad-hoc ("Sign to Run Locally"), which is
-all you need to run it on your own machine. The project is generated from
-`project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen); run
-`xcodegen generate` if you change the file layout.
+There's no signing team set up, it just signs locally ("Sign to Run Locally"), which
+is fine for running it on your own Mac. The project is generated from `project.yml`
+with [XcodeGen](https://github.com/yonaskolb/XcodeGen), so run `xcodegen generate` if
+you move files around.
 
-> On recent Xcode the Metal compiler is a separate download. If the build stops on
-> a missing Metal toolchain, run `xcodebuild -downloadComponent MetalToolchain` once.
+One heads up: on newer Xcode the Metal compiler is a separate download. If the build
+complains about a missing Metal toolchain, run this once:
 
-## The permission it needs
+```sh
+xcodebuild -downloadComponent MetalToolchain
+```
 
-The first time Scope starts capturing, macOS shows its audio-recording consent
-prompt. That's the system-audio TCC permission that backs the process-tap API —
-without it Scope can't read another app's output. The prompt's wording lives in
-`Info.plist` under `NSAudioCaptureUsageDescription`.
+## The permission thing
 
-Scope never writes the audio anywhere; it only reads frames to draw them. By
-default it also *mutes* the tapped output so the app itself stays silent — flip
-the **Silent** switch off if you'd rather hear the source while you watch it. If
-you dismiss the prompt and nothing shows up, grant it under
-**System Settings → Privacy & Security** and start capture again.
+The first time it starts capturing, macOS asks for permission to record audio. That's
+the system audio permission the tap API needs, and without it Scope can't read the
+other app's sound. The text you see in the prompt comes from
+`NSAudioCaptureUsageDescription` in `Info.plist`.
+
+Scope doesn't save the audio anywhere, it only reads it to draw it. It also mutes the
+audio it taps by default so the app itself stays quiet. If you actually want to hear
+the source while you watch it, turn off the **Silent** switch. If you said no to the
+prompt and nothing shows up, go to **System Settings > Privacy & Security**, allow it,
+and start capture again.
 
 ## Using it
 
-Choose a source from the menu — every app currently making sound is listed, along
-with **System (all audio)** — and the beam comes alive. Press **H** to show or
-hide the controls.
+Pick a source from the menu (every app making sound is listed, plus
+**System (all audio)**) and the beam starts moving. Press **H** to hide or show the
+controls.
 
-| Control      | What it does                                              |
-|--------------|-----------------------------------------------------------|
-| Source       | Which app to listen to, or the whole system               |
-| Silent       | Mute the tapped audio so Scope makes no sound (on)        |
-| Beam colour  | Warm, green, amber or ice phosphor                        |
-| Intensity    | Beam brightness                                           |
-| Glow         | Bloom amount                                              |
-| Afterglow    | How long the trail takes to fade                          |
-| Line width   | Beam thickness                                            |
-| Gain         | Input scaling                                             |
-| Pitch spin   | Rotate the figure by the detected pitch (0 turns it off)  |
+| Control | What it does |
+|---|---|
+| Source | which app to listen to, or everything |
+| Silent | mutes the tapped audio so Scope makes no sound (on by default) |
+| Beam colour | warm, green, amber or ice |
+| Intensity | how bright the beam is |
+| Glow | how much it blooms |
+| Afterglow | how long the trail sticks around |
+| Line width | how thick the beam is |
+| Gain | scales the input |
+| Pitch spin | spins the figure based on the pitch (0 is off) |
 
-Settings persist between launches.
+Your settings get saved, so they're still there next time you open it.
 
 ### Adding a source
 
-There's nothing to register. Any process that opens an audio output appears in the
-picker on its own — start playback in the app, hit refresh, and it's there.
-**System (all audio)** taps everything mixed together.
+There's nothing to set up. Any app that plays audio shows up in the list on its own.
+Just start playing something, hit the refresh button, and it's there.
+**System (all audio)** taps everything at once.
 
 ## How it works
 
-The two halves run on their own clocks and only meet at a lock-free ring buffer.
+There are two parts and they run separately, only meeting at a lock-free ring buffer.
 
-**Capture** (`Scope/Audio`) builds a `CATapDescription` for the chosen process,
-creates a tap with `AudioHardwareCreateProcessTap`, wraps it in a private aggregate
-device, and pulls float samples from a real-time IO callback. That callback does no
-allocation and takes no locks — it just copies frames into the ring.
+The **capture** side (`Scope/Audio`) makes a `CATapDescription` for the app you picked,
+creates a tap with `AudioHardwareCreateProcessTap`, puts it inside a private aggregate
+device, and reads float samples in a real-time callback. That callback doesn't allocate
+memory or take locks, it just copies samples into the ring.
 
-**Rendering** (`Scope/Render`) is a small Metal pipeline running at the display's
-refresh rate, independent of the audio clock:
+The **rendering** side (`Scope/Render`) is a small Metal pipeline that runs at the
+screen's refresh rate, separate from the audio:
 
-1. last frame's accumulation texture is faded by an exponential decay — the afterglow;
-2. the new samples are upsampled with Catmull-Rom and drawn as soft, additively
-   blended line quads, brighter where the beam moves slowly, the way a real CRT
-   dwells on slow-moving traces;
-3. a bright-pass and separable Gaussian build the bloom;
-4. a final pass tints the beam, tone-maps the overexposed core toward white, and
-   adds a faint vignette.
+1. last frame's image fades out a little, which is the afterglow
+2. the new samples get smoothed with Catmull-Rom and drawn as soft glowing line
+   segments, brighter where the beam moves slowly, like a real CRT
+3. a bright pass plus a blur make the bloom
+4. a final pass colors the beam, blows the bright core out toward white, and adds a
+   slight vignette
 
-The look is modelled on MAarts' *s(o)scilloscope*. The capture layer follows
-Apple's "Capturing system audio with Core Audio taps" sample and Guilherme Rambo's
-[AudioCap](https://github.com/insidegui/AudioCap), which is the clearest reference
-for the tap API out there.
+The look is based on the *s(o)scilloscope* plugin by MAarts. For the capture side I
+leaned on Apple's "Capturing system audio with Core Audio taps" sample and Guilherme
+Rambo's [AudioCap](https://github.com/insidegui/AudioCap), which is the clearest
+example of the tap API around.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
