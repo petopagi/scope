@@ -333,8 +333,10 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
         let rs = sinf(currentAngle)
         let w = Float(drawableSize.width)
         let h = Float(drawableSize.height)
-        let side = min(w, h)
-        let cx = w * 0.5, cy = h * 0.5
+        // Fill the whole window: X spans the full width, Y the full height.
+        let hw = w * 0.5
+        let hh = h * 0.5
+        let cx = hw, cy = hh
 
         // Auto-level (Sensitivity): track the signal peak with a fast attack /
         // slow release, then steer the trace toward a target fill. The slider
@@ -358,16 +360,16 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
         var n = 0
         if hasLast {
             let l = lastL * g, r = lastR * g
-            px[0] = cx + clampUnit(l * rc - r * rs) * side * 0.5
-            py[0] = cy - clampUnit(l * rs + r * rc) * side * 0.5
+            px[0] = cx + clampUnit(l * rc - r * rs) * hw
+            py[0] = cy - clampUnit(l * rs + r * rc) * hh
             n = 1
         }
         var f = 0
         while f < frames && n < px.count {
             let l = scratch[f << 1] * g
             let r = scratch[(f << 1) + 1] * g
-            px[n] = cx + clampUnit(l * rc - r * rs) * side * 0.5
-            py[n] = cy - clampUnit(l * rs + r * rc) * side * 0.5
+            px[n] = cx + clampUnit(l * rc - r * rs) * hw
+            py[n] = cy - clampUnit(l * rs + r * rc) * hh
             n += 1
             f += 1
         }
