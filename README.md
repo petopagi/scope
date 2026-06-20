@@ -8,7 +8,7 @@ beam traces out the shape. It leaves trails and blooms like a real CRT.
 It grabs the sound straight from the app using Core Audio's process taps, so you
 don't need BlackHole or any loopback driver.
 
-![Scope drawing a Lissajous figure](docs/scope.png)
+![Scope drawing audio as a glowing X/Y trace](docs/scope.gif)
 
 ## What you need
 
