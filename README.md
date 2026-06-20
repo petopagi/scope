@@ -1,9 +1,9 @@
 # Scope
 
-A real-time oscilloscope for macOS. You point it at an app (or the whole system)
-and it draws the audio like an old analog scope would: the left channel goes on the
-X axis, the right channel on the Y axis, and a glowing beam traces out the shape. It
-leaves trails and blooms like a real CRT.
+A real-time music visualizer for macOS. It's an audio oscilloscope: you point it at
+an app (or the whole system) and it draws the sound the way an old analog scope would.
+The left channel goes on the X axis, the right channel on the Y axis, and a glowing
+beam traces out the shape. It leaves trails and blooms like a real CRT.
 
 It grabs the sound straight from the app using Core Audio's process taps, so you
 don't need BlackHole or any loopback driver.
