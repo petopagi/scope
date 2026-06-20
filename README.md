@@ -70,7 +70,8 @@ controls.
 | Glow | how much it blooms |
 | Afterglow | how long the trail sticks around |
 | Line width | how thick the beam is |
-| Gain | scales the input |
+| Gain | scales the input by a fixed amount |
+| Sensitivity | auto-levels the trace to the music's loudness, so quiet and loud tracks both fill the screen (0 turns it off) |
 | Pitch spin | spins the figure based on the pitch (0 is off) |
 
 Your settings get saved, so they're still there next time you open it.

@@ -68,6 +68,7 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
     var sampleRate: Double = 48_000
     private let subdivisions = 6              // Catmull-Rom segments between samples
     private var backingScale: Float = 2       // points → pixels (updated from the view)
+    private var levelSmooth: Float = 0.3      // tracked signal peak, for auto-level (Sensitivity)
     private var lastTime = CACurrentMediaTime()
 
     init?(ring: AudioRingBuffer) {
@@ -334,7 +335,25 @@ final class ScopeRenderer: NSObject, MTKViewDelegate {
         let h = Float(drawableSize.height)
         let side = min(w, h)
         let cx = w * 0.5, cy = h * 0.5
-        let g = settings.gain
+
+        // Auto-level (Sensitivity): track the signal peak with a fast attack /
+        // slow release, then steer the trace toward a target fill. The slider
+        // crossfades between manual gain (0) and full auto-level (1).
+        if frames > 0 {
+            var peak: Float = 0
+            var fp = 0
+            while fp < frames {
+                let a = abs(scratch[fp << 1])
+                let b = abs(scratch[(fp << 1) + 1])
+                if a > peak { peak = a }
+                if b > peak { peak = b }
+                fp += 1
+            }
+            let k: Float = peak > levelSmooth ? 0.35 : 0.04
+            levelSmooth += (peak - levelSmooth) * k
+        }
+        let autoGain = simd_clamp(0.7 / max(levelSmooth, 0.03), 0.3, 25)
+        let g = settings.gain * (1 + (autoGain - 1) * simd_clamp(settings.sensitivity, 0, 1))
 
         var n = 0
         if hasLast {

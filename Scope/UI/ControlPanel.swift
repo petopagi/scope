@@ -101,6 +101,7 @@ struct ControlPanel: View {
             slider("Afterglow", value: $model.settings.afterglowHalfLife, range: 0.01...0.6, suffix: "s")
             slider("Line width", value: $model.settings.lineWidth, range: 0.6...6)
             slider("Gain", value: $model.settings.gain, range: 0.2...6)
+            slider("Sensitivity", value: $model.settings.sensitivity, range: 0...1)
             slider("Pitch spin", value: $model.settings.pitchRotation, range: 0...2, suffix: "×")
         }
     }
