@@ -1,0 +1,42 @@
+name: Scope
+options:
+  bundleIdPrefix: com.scope
+  deploymentTarget:
+    macOS: "14.2"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Swift 5 language mode (compiler is 6.x). Avoids Swift 6 strict-concurrency
+    # errors in the real-time Core Audio callback path.
+    SWIFT_VERSION: "5.0"
+    # No signing team on this machine -> ad-hoc "Sign to Run Locally".
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+
+targets:
+  Scope:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.2"
+    sources:
+      - path: Scope
+        excludes:
+          - "Support/Info.plist"
+    settings:
+      base:
+        PRODUCT_NAME: Scope
+        PRODUCT_BUNDLE_IDENTIFIER: com.scope.Scope
+        INFOPLIST_FILE: Scope/Support/Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: Scope/Support/Scope-Bridging-Header.h
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_APP_SANDBOX: NO
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
